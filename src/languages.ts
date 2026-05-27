@@ -31,3 +31,5 @@ export const DEEPL_TARGET: Record<LangCode, string> = {
 export function isLangCode(s: string): s is LangCode {
   return (SUPPORTED_LANGUAGES as readonly string[]).includes(s);
 }
+
+export const RTL_LANGS = new Set<LangCode>(['ar']);

@@ -18,11 +18,31 @@ function xmlUnescape(s: string): string {
     .replace(/&apos;/g, "'");
 }
 
+function applyDirection(xml: string, sourceIsRTL: boolean, targetIsRTL: boolean): string {
+  if (sourceIsRTL === targetIsRTL) return xml;
+
+  if (targetIsRTL) {
+    // Strip any existing markers first to avoid duplicates, then inject
+    return xml
+      .replace(/<w:bidi\s*\/>/g, '')
+      .replace(/<w:rtl\s*\/>/g, '')
+      .replace(/<\/w:pPr>/g, '<w:bidi/></w:pPr>')
+      .replace(/<\/w:rPr>/g, '<w:rtl/></w:rPr>');
+  } else {
+    // RTL → LTR: strip all direction markers
+    return xml
+      .replace(/<w:bidi\s*\/>/g, '')
+      .replace(/<w:rtl\s*\/>/g, '');
+  }
+}
+
 export async function translateDocx(
   inputPath: string,
   outputPath: string,
   targetLang: string,
   sourceLang?: string,
+  sourceIsRTL = false,
+  targetIsRTL = false,
 ): Promise<void> {
   const data = await readFile(inputPath);
   const zip = await JSZip.loadAsync(data);
@@ -44,7 +64,7 @@ export async function translateDocx(
 
   // Replace each <w:t> text in order using a counter closure
   let i = 0;
-  const newXml = xml.replace(
+  const translatedXml = xml.replace(
     /<w:t([^>]*)>([^<]*)<\/w:t>/g,
     (_, attrs: string) => {
       const text = translated[i++] ?? '';
@@ -52,7 +72,9 @@ export async function translateDocx(
     },
   );
 
-  zip.file('word/document.xml', newXml);
+  const finalXml = applyDirection(translatedXml, sourceIsRTL, targetIsRTL);
+
+  zip.file('word/document.xml', finalXml);
 
   const output = await zip.generateAsync({ type: 'nodebuffer' });
   await writeFile(outputPath, output);

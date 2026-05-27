@@ -7,6 +7,7 @@ export async function translatePdf(
   outputPath: string,
   targetLang: string,
   sourceLang?: string,
+  targetIsRTL = false,
 ): Promise<void> {
   const data = await readFile(inputPath);
 
@@ -17,5 +18,7 @@ export async function translatePdf(
   const lines = result.text.split('\n').filter((l) => l.trim().length > 0);
   const translated = await translateTexts(lines, targetLang, sourceLang);
 
-  await writeFile(outputPath, translated.join('\n'), 'utf-8');
+  // Prepend a Right-to-Left Mark so plain-text viewers render RTL correctly
+  const prefix = targetIsRTL ? '‏' : '';
+  await writeFile(outputPath, translated.map((l) => prefix + l).join('\n'), 'utf-8');
 }

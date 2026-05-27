@@ -9,6 +9,7 @@ import {
   LANGUAGE_NAMES,
   DEEPL_SOURCE,
   DEEPL_TARGET,
+  RTL_LANGS,
   isLangCode,
 } from './languages.js';
 import { translateDocx } from './docx.js';
@@ -79,6 +80,10 @@ async function main(): Promise<void> {
   const sourceLang =
     opts.from !== undefined && isLangCode(opts.from) ? DEEPL_SOURCE[opts.from] : undefined;
 
+  const sourceIsRTL =
+    opts.from !== undefined && isLangCode(opts.from) ? RTL_LANGS.has(opts.from) : false;
+  const targetIsRTL = RTL_LANGS.has(toLangRaw);
+
   // Detect whether input is a file path or a raw string
   if (existsSync(input)) {
     const ext = extname(input).toLowerCase();
@@ -88,13 +93,13 @@ async function main(): Promise<void> {
     if (ext === '.docx') {
       const outputPath = join(dir, `${base}.${toLangRaw}.docx`);
       console.log(chalk.cyan(`Translating DOCX → ${outputPath} …`));
-      await translateDocx(input, outputPath, targetLang, sourceLang);
+      await translateDocx(input, outputPath, targetLang, sourceLang, sourceIsRTL, targetIsRTL);
       console.log(chalk.green(`Done: ${outputPath}`));
     } else if (ext === '.pdf') {
       const outputPath = join(dir, `${base}.${toLangRaw}.txt`);
       console.log(chalk.yellow('Note: PDF output is plain text — formatting cannot be preserved.'));
       console.log(chalk.cyan(`Translating PDF → ${outputPath} …`));
-      await translatePdf(input, outputPath, targetLang, sourceLang);
+      await translatePdf(input, outputPath, targetLang, sourceLang, targetIsRTL);
       console.log(chalk.green(`Done: ${outputPath}`));
     } else {
       console.error(chalk.red(`Error: unsupported file type "${ext}". Supported: .docx, .pdf`));
